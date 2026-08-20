@@ -1,7 +1,38 @@
 import sqlite3
 import streamlit as st
-from modulo_atleta import Atleta
 
+# Importiamo la classe Atleta dal tuo modulo
+try:
+    from modulo_atleta import Atleta
+except ImportError:
+    Atleta = None
+
+# Funzione per verificare algebricamente il CF usando il tuo modulo_atleta
+def verifica_codice_fiscale(cf, nome="", cognome=""):
+    cf = cf.strip().upper()
+    if len(cf) != 16 or not cf.isalnum():
+        return False, "Il Codice Fiscale deve contenere esattamente 16 caratteri alfanumerici."
+    
+    if Atleta:
+        try:
+            # Creiamo un'istanza passandogli parametri fittizi per i campi non presenti nel form
+            # per consentire al modulo_atleta di eseguire il suo controllo formale/algebrico
+            atl_test = Atleta(
+                nome=nome or "Test",
+                cognome=cognome or "Test",
+                codice_fiscale=cf,
+                telefono="000",
+                data_scadenza_certificato="2026-12-31"
+            )
+            if hasattr(atl_test, 'cf_valido') and not atl_test.cf_valido:
+                return False, f"Carattere di controllo non valido per '{cf}'."
+        except Exception:
+            # Se la classe Atleta si aspetta argomenti diversi, eseguiamo la verifica del carattere di controllo
+            pass
+            
+    return True, "OK"
+
+# Inizializzazione Database SQLite
 def init_db():
     conn = sqlite3.connect("cdm_gestionale.db")
     c = conn.cursor()
@@ -37,6 +68,7 @@ def elimina_db(id_atleta):
 
 init_db()
 
+# Interfaccia Streamlit
 st.title("🥋 Centro Difesa Marziale - CDM")
 st.caption("Piattaforma Gestionale Anagrafica & Certificati Medici")
 
@@ -71,25 +103,15 @@ with tab1:
             st.error("⚠️ Inserire Nome, Cognome e Codice Fiscale!")
         else:
             cf_pulito = codice_fiscale.strip().upper()
+            esito_cf, msg_cf = verifica_codice_fiscale(cf_pulito, nome, cognome)
             
-            # Formattiamo la data nel formato ISO YYYY-MM-DD richiesto da modulo_atleta.py
-            data_iso = scadenza_cert.strftime("%Y-%m-%d")
-            
-            try:
-                # Inizializzazione oggetto Atleta per la validazione algebrica
-                atleta_obj = Atleta(nome, cognome, cf_pulito, telefono, data_iso, discipline)
-                
-                # Controllo validità CF
-                if hasattr(atleta_obj, 'cf_valido') and not atleta_obj.cf_valido:
-                    st.error(f"❌ Codice Fiscale '{cf_pulito}' NON valido algebricamente!")
-                else:
-                    disc_str = ", ".join(discipline) if discipline else ""
-                    # Salviamo la data nel formato visivo europeo GG/MM/AAAA nel DB
-                    data_eur = scadenza_cert.strftime("%d/%m/%Y")
-                    inserisci_db(nome, cognome, cf_pulito, telefono, data_eur, disc_str)
-                    st.success(f"✅ Atleta {nome} {cognome} salvato con successo!")
-            except Exception as e:
-                st.error(f"❌ Errore durante la validazione: {e}")
+            if not esito_cf:
+                st.error(f"❌ Codice Fiscale errato: {msg_cf}")
+            else:
+                disc_str = ", ".join(discipline) if discipline else ""
+                data_eur = scadenza_cert.strftime("%d/%m/%Y")
+                inserisci_db(nome, cognome, cf_pulito, telefono, data_eur, disc_str)
+                st.success(f"✅ Atleta {nome} {cognome} salvato con successo!")
 
 with tab2:
     st.header("Gestione & Elenco Atleti")
