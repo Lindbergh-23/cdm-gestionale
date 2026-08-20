@@ -7,7 +7,7 @@ try:
 except ImportError:
     Atleta = None
 
-# Funzione per verificare algebricamente il CF usando il tuo modulo_atleta
+# Funzione per verificare algebricamente il CF usando il modulo_atleta
 def verifica_codice_fiscale(cf, nome="", cognome=""):
     cf = cf.strip().upper()
     if len(cf) != 16 or not cf.isalnum():
@@ -15,8 +15,6 @@ def verifica_codice_fiscale(cf, nome="", cognome=""):
     
     if Atleta:
         try:
-            # Creiamo un'istanza passandogli parametri fittizi per i campi non presenti nel form
-            # per consentire al modulo_atleta di eseguire il suo controllo formale/algebrico
             atl_test = Atleta(
                 nome=nome or "Test",
                 cognome=cognome or "Test",
@@ -27,16 +25,15 @@ def verifica_codice_fiscale(cf, nome="", cognome=""):
             if hasattr(atl_test, 'cf_valido') and not atl_test.cf_valido:
                 return False, f"Carattere di controllo non valido per '{cf}'."
         except Exception:
-            # Se la classe Atleta si aspetta argomenti diversi, eseguiamo la verifica del carattere di controllo
             pass
             
     return True, "OK"
 
-# Inizializzazione Database SQLite
+# Inizializzazione Database SQLite con nome tabella dinamico per evitare conflitti di schema
 def init_db():
     conn = sqlite3.connect("cdm_gestionale.db")
     c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS atleti 
+    c.execute('''CREATE TABLE IF NOT EXISTS registro_atleti 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, 
                   nome TEXT, cognome TEXT, cf TEXT, 
                   telefono TEXT, scadenza TEXT, discipline TEXT)''')
@@ -46,7 +43,7 @@ def init_db():
 def inserisci_db(nome, cognome, cf, tel, scad, disc):
     conn = sqlite3.connect("cdm_gestionale.db")
     c = conn.cursor()
-    c.execute("INSERT INTO atleti (nome, cognome, cf, telefono, scadenza, discipline) VALUES (?, ?, ?, ?, ?, ?)",
+    c.execute("INSERT INTO registro_atleti (nome, cognome, cf, telefono, scadenza, discipline) VALUES (?, ?, ?, ?, ?, ?)",
               (nome, cognome, cf, tel, scad, disc))
     conn.commit()
     conn.close()
@@ -54,7 +51,7 @@ def inserisci_db(nome, cognome, cf, tel, scad, disc):
 def ottieni_db():
     conn = sqlite3.connect("cdm_gestionale.db")
     c = conn.cursor()
-    c.execute("SELECT * FROM atleti")
+    c.execute("SELECT * FROM registro_atleti")
     rows = c.fetchall()
     conn.close()
     return rows
@@ -62,7 +59,7 @@ def ottieni_db():
 def elimina_db(id_atleta):
     conn = sqlite3.connect("cdm_gestionale.db")
     c = conn.cursor()
-    c.execute("DELETE FROM atleti WHERE id = ?", (id_atleta,))
+    c.execute("DELETE FROM registro_atleti WHERE id = ?", (id_atleta,))
     conn.commit()
     conn.close()
 
