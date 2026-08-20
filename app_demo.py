@@ -1,17 +1,53 @@
+import sqlite3
 import streamlit as st
-import database as db
 from modulo_atleta import Atleta
 
-# Titolo e intestazione
+# Funzioni di supporto per il Database SQLite nativo
+def init_db():
+    conn = sqlite3.connect("cdm_gestionale.db")
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS atleti 
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                  nome TEXT, cognome TEXT, cf TEXT, 
+                  telefono TEXT, scadenza TEXT, discipline TEXT)''')
+    conn.commit()
+    conn.close()
+
+def inserisci_db(nome, cognome, cf, tel, scad, disc):
+    conn = sqlite3.connect("cdm_gestionale.db")
+    c = conn.cursor()
+    c.execute("INSERT INTO atleti (nome, cognome, cf, telefono, scadenza, discipline) VALUES (?, ?, ?, ?, ?, ?)",
+              (nome, cognome, cf, tel, scad, disc))
+    conn.commit()
+    conn.close()
+
+def ottieni_db():
+    conn = sqlite3.connect("cdm_gestionale.db")
+    c = conn.cursor()
+    c.execute("SELECT * FROM atleti")
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
+def elimina_db(id_atleta):
+    conn = sqlite3.connect("cdm_gestionale.db")
+    c = conn.cursor()
+    c.execute("DELETE FROM atleti WHERE id = ?", (id_atleta,))
+    conn.commit()
+    conn.close()
+
+# Inizializza il DB
+init_db()
+
+# Interfaccia Streamlit
 st.title("🥋 Centro Difesa Marziale - CDM")
 st.caption("Piattaforma Gestionale Anagrafica & Certificati Medici")
 
-tab1, tab2 = st.tabs(["📝 Inserimento Atleta", "🔍 Cerca & Verifica Scadenze"])
+tab1, tab2 = st.tabs(["📝 Inserimento Atleta", "🔍 Cerca & Gestione Atleti"])
 
 with tab1:
     st.header("Nuova Iscrizione Atleta")
     
-    # st.form con clear_on_submit=True azzera tutti i campi dopo il salvataggio
     with st.form(key="form_iscrizione", clear_on_submit=True):
         col_nome, col_cognome = st.columns(2)
         with col_nome:
@@ -37,26 +73,25 @@ with tab1:
         if not nome or not cognome or not codice_fiscale:
             st.error("⚠️ Inserire Nome, Cognome e Codice Fiscale!")
         else:
-            # Creazione istanza Atleta e validazione CF
             cf_pulito = codice_fiscale.strip().upper()
-            atleta_test = Atleta(nome, cognome, cf_pulito, telefono, str(scadenza_cert), discipline)
             
             # Controllo validità tramite il modulo_atleta
-            if hasattr(atleta_test, 'cf_valido') and not atleta_test.cf_valido:
-                st.error(f"❌ Codice Fiscale '{cf_pulito}' NON valido algebricamente! Verificare l'ultima lettera.")
+            atleta_obj = Atleta(nome, cognome, cf_pulito, telefono, str(scadenza_cert), discipline)
+            
+            # Se la proprietà di validazione CF esiste ed è Falsa, blocca l'inserimento
+            if hasattr(atleta_obj, 'cf_valido') and not atleta_obj.cf_valido:
+                st.error(f"❌ Codice Fiscale '{cf_pulito}' NON valido algebricamente!")
             else:
-                discipline_str = ", ".join(discipline) if discipline else ""
-                db.inserisci_atleta(nome, cognome, cf_pulito, telefono, str(scadenza_cert), discipline_str)
+                disc_str = ", ".join(discipline) if discipline else ""
+                inserisci_db(nome, cognome, cf_pulito, telefono, str(scadenza_cert), disc_str)
                 st.success(f"✅ Atleta {nome} {cognome} salvato con successo!")
 
 with tab2:
-    st.header("Gestione & Ricerca Atleti")
+    st.header("Gestione & Elenco Atleti")
     
-    # Visualizzazione tabella atleti
-    atleti = db.ottieni_atleti()
+    atleti = ottieni_db()
     if atleti:
         for atl in atleti:
-            # Assumendo struttura tuple: (id, nome, cognome, cf, telefono, scadenza, discipline)
             id_atl, n, c, cf, tel, scad, disc = atl[0], atl[1], atl[2], atl[3], atl[4], atl[5], atl[6]
             
             col_dati, col_del = st.columns([4, 1])
@@ -64,7 +99,7 @@ with tab2:
                 st.write(f"**{n} {c}** | CF: `{cf}` | Tel: {tel} | Scad. Certificato: **{scad}** | {disc}")
             with col_del:
                 if st.button("🗑️ Elimina", key=f"del_{id_atl}"):
-                    db.elimina_atleta(id_atl)
+                    elimina_db(id_atl)
                     st.warning(f"Atleta {n} {c} eliminato.")
                     st.rerun()
             st.divider()
