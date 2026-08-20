@@ -77,7 +77,7 @@ def elimina_db(id_atleta):
 
 init_db()
 
-st.title("🥋 Centro Difesa Marziale - CDM")
+st.title("🥋 Centro Discipline Marziali - CDM")
 st.caption("Piattaforma Gestionale Anagrafica & Certificati Medici")
 
 tab1, tab2 = st.tabs(["📝 Inserimento Atleta", "🔍 Cerca & Gestione Atleti"])
