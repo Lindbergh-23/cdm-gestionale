@@ -1,31 +1,43 @@
 import sqlite3
 import streamlit as st
 
-# Importiamo la classe Atleta dal tuo modulo
-try:
-    from modulo_atleta import Atleta
-except ImportError:
-    Atleta = None
+def calcola_carattere_controllo_cf(cf_15):
+    """Calcola algebricamente la 16a lettera del Codice Fiscale secondo l'algoritmo ufficiale."""
+    pari = {
+        '0': 0, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
+        'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4, 'F': 5, 'G': 6, 'H': 7, 'I': 8, 'J': 9,
+        'K': 10, 'L': 11, 'M': 12, 'N': 13, 'O': 14, 'P': 15, 'Q': 16, 'R': 17, 'S': 18,
+        'T': 19, 'U': 20, 'V': 21, 'W': 22, 'X': 23, 'Y': 24, 'Z': 25
+    }
+    dispari = {
+        '0': 1, '1': 0, '2': 5, '3': 7, '4': 9, '5': 13, '6': 15, '7': 17, '8': 19, '9': 21,
+        'A': 1, 'B': 0, 'C': 5, 'D': 7, 'E': 9, 'F': 13, 'G': 15, 'H': 17, 'I': 19, 'J': 21,
+        'K': 2, 'L': 4, 'M': 18, 'N': 20, 'O': 11, 'P': 3, 'Q': 6, 'R': 8, 'S': 12,
+        'T': 14, 'U': 16, 'V': 10, 'W': 22, 'X': 25, 'Y': 24, 'Z': 23
+    }
+    controllo = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    
+    somma = 0
+    for i, char in enumerate(cf_15):
+        if (i + 1) % 2 == 0:  # Posizioni pari (1-based)
+            somma += pari.get(char, 0)
+        else:  # Posizioni dispari (1-based)
+            somma += dispari.get(char, 0)
+            
+    return controllo[somma % 26]
 
-def verifica_codice_fiscale(cf, nome="", cognome=""):
+def verifica_codice_fiscale(cf):
     cf = cf.strip().upper()
     if len(cf) != 16 or not cf.isalnum():
         return False, "Il Codice Fiscale deve contenere esattamente 16 caratteri alfanumerici."
     
-    if Atleta:
-        try:
-            atl_test = Atleta(
-                nome=nome or "Test",
-                cognome=cognome or "Test",
-                codice_fiscale=cf,
-                telefono="000",
-                data_scadenza_certificato="2026-12-31"
-            )
-            if hasattr(atl_test, 'cf_valido') and not atl_test.cf_valido:
-                return False, f"Carattere di controllo (16ª lettera) NON valido per '{cf}'."
-        except Exception:
-            pass
-            
+    # Verifica algebrica della 16a lettera
+    carattere_calcolato = calcola_carattere_controllo_cf(cf[:15])
+    carattere_inserito = cf[15]
+    
+    if carattere_inserito != carattere_calcolato:
+        return False, f"Carattere di controllo errato: inserito '{carattere_inserito}', ma per questo codice deve essere '{carattere_calcolato}'."
+        
     return True, "OK"
 
 def init_db():
@@ -93,12 +105,11 @@ with tab1:
         btn_salva = st.form_submit_button("💾 Salva in Database")
 
     if btn_salva:
-        # Controllo obbligatorietà di tutti i dati essenziali
         if not nome or not cognome or not codice_fiscale or not telefono or not discipline:
             st.error("⚠️ Compilare tutti i campi (Nome, Cognome, CF, Telefono e almeno una Disciplina) prima di salvare!")
         else:
             cf_pulito = codice_fiscale.strip().upper()
-            esito_cf, msg_cf = verifica_codice_fiscale(cf_pulito, nome, cognome)
+            esito_cf, msg_cf = verifica_codice_fiscale(cf_pulito)
             
             if not esito_cf:
                 st.error(f"❌ Impossibile salvare: {msg_cf}")
