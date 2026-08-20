@@ -34,8 +34,6 @@ Per renderlo **rigido, severo e inattaccabile**, inseriamo l'algoritmo algebrico
 
 ### Codice Corretto e Blindato per `app_demo.py`
 
-Sostituisci **tutto il contenuto** di `app_demo.py` su GitHub con questo codice:
-
 ```python
 import sqlite3
 import streamlit as st
