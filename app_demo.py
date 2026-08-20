@@ -15,9 +15,7 @@ def controlla_cf_algebrico(cf):
     }
     pari = {
         '0':0, '1':1, '2':2, '3':3, '4':4, '5':5, '6':6, '7':7, '8':8, '9':9,
-        'A':0, 'B':1, 'C':2, 'D':3, 'E':4, 'F':5, 'G':6Sì, Generale, ho letto benissimo e dallo screenshot si capisce chiaramente cosa è successo!
-
-Ci sono **due aspetti distinti** da chiarire:
+        'A':0, 'B':1, 'C':2, 'D':3, 'E':4, 'F':5, 'G':6
 
 ### 1. Perché i campi si sono svuotati dopo il Salva?
 Quella è la funzione `clear_on_submit=True` che avevamo impostato: quando clicchi su **Salva** (o premi *Enter* nel form), Streamlit invia i dati al database e **subito dopo pulisce tutte le caselle di testo** per lasciarti la maschera pronta per un nuovo inserimento. Quindi il fatto che ora vedi le caselle vuote è il segnale che il form si è resettato con successo dopo l'invio.
