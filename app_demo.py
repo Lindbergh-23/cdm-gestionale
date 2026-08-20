@@ -2,7 +2,6 @@ import sqlite3
 import streamlit as st
 from modulo_atleta import Atleta
 
-# Funzioni di supporto per il Database SQLite nativo
 def init_db():
     conn = sqlite3.connect("cdm_gestionale.db")
     c = conn.cursor()
@@ -36,10 +35,8 @@ def elimina_db(id_atleta):
     conn.commit()
     conn.close()
 
-# Inizializza il DB
 init_db()
 
-# Interfaccia Streamlit
 st.title("🥋 Centro Difesa Marziale - CDM")
 st.caption("Piattaforma Gestionale Anagrafica & Certificati Medici")
 
@@ -75,16 +72,24 @@ with tab1:
         else:
             cf_pulito = codice_fiscale.strip().upper()
             
-            # Controllo validità tramite il modulo_atleta
-            atleta_obj = Atleta(nome, cognome, cf_pulito, telefono, str(scadenza_cert), discipline)
+            # Formattiamo la data nel formato ISO YYYY-MM-DD richiesto da modulo_atleta.py
+            data_iso = scadenza_cert.strftime("%Y-%m-%d")
             
-            # Se la proprietà di validazione CF esiste ed è Falsa, blocca l'inserimento
-            if hasattr(atleta_obj, 'cf_valido') and not atleta_obj.cf_valido:
-                st.error(f"❌ Codice Fiscale '{cf_pulito}' NON valido algebricamente!")
-            else:
-                disc_str = ", ".join(discipline) if discipline else ""
-                inserisci_db(nome, cognome, cf_pulito, telefono, str(scadenza_cert), disc_str)
-                st.success(f"✅ Atleta {nome} {cognome} salvato con successo!")
+            try:
+                # Inizializzazione oggetto Atleta per la validazione algebrica
+                atleta_obj = Atleta(nome, cognome, cf_pulito, telefono, data_iso, discipline)
+                
+                # Controllo validità CF
+                if hasattr(atleta_obj, 'cf_valido') and not atleta_obj.cf_valido:
+                    st.error(f"❌ Codice Fiscale '{cf_pulito}' NON valido algebricamente!")
+                else:
+                    disc_str = ", ".join(discipline) if discipline else ""
+                    # Salviamo la data nel formato visivo europeo GG/MM/AAAA nel DB
+                    data_eur = scadenza_cert.strftime("%d/%m/%Y")
+                    inserisci_db(nome, cognome, cf_pulito, telefono, data_eur, disc_str)
+                    st.success(f"✅ Atleta {nome} {cognome} salvato con successo!")
+            except Exception as e:
+                st.error(f"❌ Errore durante la validazione: {e}")
 
 with tab2:
     st.header("Gestione & Elenco Atleti")
