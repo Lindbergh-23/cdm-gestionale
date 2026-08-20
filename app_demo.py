@@ -2,7 +2,7 @@ import sqlite3
 import streamlit as st
 
 def calcola_carattere_controllo_cf(cf_15):
-    """Calcola algebricamente la 16a lettera del Codice Fiscale secondo l'algoritmo ufficiale."""
+    """Calcola algebricamente la 16a lettera del Codice Fiscale (algoritmo ufficiale MEF)."""
     pari = {
         '0': 0, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
         'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4, 'F': 5, 'G': 6, 'H': 7, 'I': 8, 'J': 9,
@@ -18,10 +18,13 @@ def calcola_carattere_controllo_cf(cf_15):
     controllo = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     
     somma = 0
+    # In Python l'indice i parte da 0. 
+    # Per l'algoritmo ufficiale: 1° carattere (i=0) è DISPARI, 2° carattere (i=1) è PARI.
     for i, char in enumerate(cf_15):
-        if (i + 1) % 2 == 0:  # Posizioni pari (1-based)
+        pos = i + 1  # Trasformiamo l'indice in posizione 1-based
+        if pos % 2 == 0:
             somma += pari.get(char, 0)
-        else:  # Posizioni dispari (1-based)
+        else:
             somma += dispari.get(char, 0)
             
     return controllo[somma % 26]
@@ -31,12 +34,11 @@ def verifica_codice_fiscale(cf):
     if len(cf) != 16 or not cf.isalnum():
         return False, "Il Codice Fiscale deve contenere esattamente 16 caratteri alfanumerici."
     
-    # Verifica algebrica della 16a lettera
     carattere_calcolato = calcola_carattere_controllo_cf(cf[:15])
     carattere_inserito = cf[15]
     
     if carattere_inserito != carattere_calcolato:
-        return False, f"Carattere di controllo errato: inserito '{carattere_inserito}', ma per questo codice deve essere '{carattere_calcolato}'."
+        return False, f"Carattere di controllo (16ª lettera) non valido. Verificare la digitazione."
         
     return True, "OK"
 
