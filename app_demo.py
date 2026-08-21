@@ -90,9 +90,12 @@ def elimina_db(id_atleta):
 
 init_db()
 
-# INIZIALIZZAZIONE MESSAGGIO DI SUCESSO
-if "msg_successo" not in st.session_state:
-    st.session_state.msg_successo = ""
+# INIZIALIZZAZIONE STATO CAMPI
+if "k_nome" not in st.session_state: st.session_state.k_nome = ""
+if "k_cognome" not in st.session_state: st.session_state.k_cognome = ""
+if "k_cf" not in st.session_state: st.session_state.k_cf = ""
+if "k_tel" not in st.session_state: st.session_state.k_tel = ""
+if "msg_successo" not in st.session_state: st.session_state.msg_successo = ""
 
 st.title("🥋 Centro Discipline Marziali - CDM")
 st.caption("Piattaforma Gestionale Anagrafica & Certificati Medici")
@@ -105,29 +108,27 @@ with tab1:
     if st.session_state.msg_successo:
         st.success(st.session_state.msg_successo)
         st.session_state.msg_successo = ""
-    
-    # Usiamo clear_on_submit=True per pulire automaticamente i campi dopo il salvataggio
-    with st.form(key="form_iscrizione", clear_on_submit=True):
-        col_nome, col_cognome = st.columns(2)
-        with col_nome:
-            nome = st.text_input("Nome")
-        with col_cognome:
-            cognome = st.text_input("Cognome")
 
-        col_cf, col_tel = st.columns(2)
-        with col_cf:
-            codice_fiscale = st.text_input("Codice Fiscale (16 car.)")
-            
-        with col_tel:
-            telefono = st.text_input("Telefono")
+    # Campi svincolati dal Form per evitare l'invio accidentale con Enter
+    col_nome, col_cognome = st.columns(2)
+    with col_nome:
+        nome = st.text_input("Nome", key="input_nome")
+    with col_cognome:
+        cognome = st.text_input("Cognome", key="input_cognome")
 
-        col_cert, col_disc = st.columns(2)
-        with col_cert:
-            scadenza_cert = st.date_input("Scadenza Certificato Medico", format="DD/MM/YYYY")
-        with col_disc:
-            discipline = st.multiselect("Discipline", ["Judo", "Karate", "Ju-Jitsu", "Tai-Chi"])
+    col_cf, col_tel = st.columns(2)
+    with col_cf:
+        codice_fiscale = st.text_input("Codice Fiscale (16 car.)", key="input_cf")
+    with col_tel:
+        telefono = st.text_input("Telefono", key="input_tel")
 
-        btn_salva = st.form_submit_button("💾 Salva in Database")
+    col_cert, col_disc = st.columns(2)
+    with col_cert:
+        scadenza_cert = st.date_input("Scadenza Certificato Medico", format="DD/MM/YYYY")
+    with col_disc:
+        discipline = st.multiselect("Discipline", ["Judo", "Karate", "Ju-Jitsu", "Tai-Chi"], key="input_disc")
+
+    btn_salva = st.button("💾 Salva in Database", type="primary")
 
     if btn_salva:
         if not nome or not cognome or not codice_fiscale or not telefono or not discipline:
