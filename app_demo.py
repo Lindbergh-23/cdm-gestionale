@@ -85,41 +85,66 @@ tab1, tab2 = st.tabs(["📝 Inserimento Atleta", "🔍 Cerca & Gestione Atleti"]
 with tab1:
     st.header("Nuova Iscrizione Atleta")
     
-    with st.form(key="form_iscrizione", clear_on_submit=True):
+    # Form con dati che non si cancellano
+    with st.form(key="form_iscrizione", clear_on_submit=False):
         col_nome, col_cognome = st.columns(2)
         with col_nome:
-            nome = st.text_input("Nome")
+            nome = st.text_input("Nome", value=st.session_state.input_nome)
         with col_cognome:
-            cognome = st.text_input("Cognome")
+            cognome = st.text_input("Cognome", value=st.session_state.input_cognome)
 
         col_cf, col_tel = st.columns(2)
         with col_cf:
-            codice_fiscale = st.text_input("Codice Fiscale (16 car.)")
+            # Se la variabile d'errore è attiva, cambiamo l'etichetta del campo in ROSSO/ALERT
+            label_cf = "❌ Codice Fiscale (ERRATO - RICORREGGERE)" if st.session_state.get("cf_errato", False) else "Codice Fiscale (16 car.)"
+            codice_fiscale = st.text_input(label_cf, value=st.session_state.input_cf)
+            
         with col_tel:
-            telefono = st.text_input("Telefono")
+            telefono = st.text_input("Telefono", value=st.session_state.input_tel)
 
         col_cert, col_disc = st.columns(2)
         with col_cert:
             scadenza_cert = st.date_input("Scadenza Certificato Medico", format="DD/MM/YYYY")
         with col_disc:
-            discipline = st.multiselect("Discipline", ["Judo", "Karate", "Ju-Jitsu", "Tai-Chi"])
+            discipline = st.multiselect("Discipline", ["Judo", "Karate", "Ju-Jitsu", "Tai-Chi"], default=st.session_state.input_disc)
 
         btn_salva = st.form_submit_button("💾 Salva in Database")
 
     if btn_salva:
+        # Memorizziamo ciò che è stato digitato
+        st.session_state.input_nome = nome
+        st.session_state.input_cognome = cognome
+        st.session_state.input_cf = codice_fiscale
+        st.session_state.input_tel = telefono
+        st.session_state.input_disc = discipline
+
         if not nome or not cognome or not codice_fiscale or not telefono or not discipline:
-            st.error("⚠️ Compilare tutti i campi (Nome, Cognome, CF, Telefono e almeno una Disciplina) prima di salvare!")
+            st.error("⚠️ Compilare tutti i campi prima di salvare!")
         else:
             cf_pulito = codice_fiscale.strip().upper()
             esito_cf, msg_cf = verifica_codice_fiscale(cf_pulito)
             
             if not esito_cf:
-                st.error(f"❌ Impossibile salvare: {msg_cf}")
+                # Impostiamo il flag di errore e ricarichiamo la pagina per evidenziare il campo in rosso!
+                st.session_state.cf_errato = True
+                st.error(f"❌ {msg_cf}")
+                st.rerun()
             else:
+                # Se è corretto, rimuoviamo l'allarme e salviamo
+                st.session_state.cf_errato = False
                 disc_str = ", ".join(discipline)
                 data_eur = scadenza_cert.strftime("%d/%m/%Y")
                 inserisci_db(nome, cognome, cf_pulito, telefono, data_eur, disc_str)
+                
                 st.success(f"✅ Atleta {nome} {cognome} salvato con successo!")
+                
+                # Reset di tutti i dati
+                st.session_state.input_nome = ""
+                st.session_state.input_cognome = ""
+                st.session_state.input_cf = ""
+                st.session_state.input_tel = ""
+                st.session_state.input_disc = []
+                st.rerun()
 
 with tab2:
     st.header("Gestione & Elenco Atleti")
