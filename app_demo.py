@@ -67,10 +67,16 @@ def inserisci_db(nome, cognome, cf, tel, scad, disc):
     conn.commit()
     conn.close()
 
-def ottieni_db():
+def ottieni_db(query_ricerca=""):
     conn = sqlite3.connect("cdm_gestionale.db")
     c = conn.cursor()
-    c.execute("SELECT * FROM registro_atleti")
+    if query_ricerca:
+        param = f"%{query_ricerca.strip()}%"
+        c.execute("""SELECT * FROM registro_atleti 
+                     WHERE nome LIKE ? OR cognome LIKE ? OR cf LIKE ?""", 
+                  (param, param, param))
+    else:
+        c.execute("SELECT * FROM registro_atleti")
     rows = c.fetchall()
     conn.close()
     return rows
@@ -84,7 +90,7 @@ def elimina_db(id_atleta):
 
 init_db()
 
-# INIZIALIZZAZIONE STATI E CHIAVI FORM
+# INIZIALIZZAZIONE STATI
 if "form_key" not in st.session_state:
     st.session_state.form_key = 0
 if "input_nome" not in st.session_state:
@@ -114,7 +120,6 @@ with tab1:
         st.success(st.session_state.msg_successo)
         st.session_state.msg_successo = ""
     
-    # Il form cambia identificativo dinamico (form_key) ogni volta che salviamo con successo, resettando l'interfaccia
     with st.form(key=f"form_iscrizione_{st.session_state.form_key}", clear_on_submit=False):
         col_nome, col_cognome = st.columns(2)
         with col_nome:
@@ -156,36 +161,39 @@ with tab1:
                 st.error(f"❌ Impossibile salvare: {msg_cf}")
                 st.rerun()
             else:
+                # Se il CF è valido, spegniamo la spia rossa di errore di digitazione
+                st.session_state.cf_errato = False
+                
                 # Controlliamo se l'atleta esiste già nel DB
                 gia_presente = atleta_esistente(cf_pulito)
                 if gia_presente:
-                    st.session_state.cf_errato = True
-                    st.error(f"⚠️ Atleta già presente in archivio: **{gia_presente[0]} {gia_presente[1]}** (CF: {cf_pulito})")
-                    st.rerun()
+                    st.warning(f"⚠️ **ATLETA GIÀ REGISTRATO**: L'atleta **{gia_presente[0]} {gia_presente[1]}** (CF: `{cf_pulito}`) è già presente nel database!")
                 else:
-                    st.session_state.cf_errato = False
-                    
                     disc_str = ", ".join(discipline)
                     data_eur = scadenza_cert.strftime("%d/%m/%Y")
                     inserisci_db(nome, cognome, cf_pulito, telefono, data_eur, disc_str)
                     
                     st.session_state.msg_successo = f"✅ Atleta {nome} {cognome} salvato con successo!"
                     
-                    # Reset variabili di stato
+                    # Reset variabili di stato e form
                     st.session_state.input_nome = ""
                     st.session_state.input_cognome = ""
                     st.session_state.input_cf = ""
                     st.session_state.input_tel = ""
                     st.session_state.input_disc = []
-                    # Incrementiamo il form_key per distruggere il vecchio form e forzarne uno completamente pulito
                     st.session_state.form_key += 1
                     st.rerun()
 
 with tab2:
     st.header("Gestione & Elenco Atleti")
     
-    atleti = ottieni_db()
+    # Campo di ricerca dinamico
+    search_query = st.text_input("🔎 Cerca per Nome, Cognome o Codice Fiscale:", placeholder="Es: Roberto oppure BRN...")
+    
+    atleti = ottieni_db(search_query)
+    
     if atleti:
+        st.caption(f"Trovati {len(atleti)} atleti:")
         for atl in atleti:
             id_atl, n, c, cf, tel, scad, disc = atl[0], atl[1], atl[2], atl[3], atl[4], atl[5], atl[6]
             
@@ -199,4 +207,7 @@ with tab2:
                     st.rerun()
             st.divider()
     else:
-        st.info("Nessun atleta presente nel database.")
+        if search_query:
+            st.info(f"Nessun atleta trovato corrispondente a '{search_query}'.")
+        else:
+            st.info("Nessun atleta presente nel database.")
