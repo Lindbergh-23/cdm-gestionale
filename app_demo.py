@@ -1,6 +1,8 @@
+import os
 import sqlite3
 import streamlit as st
 import streamlit.components.v1 as components
+from PIL import Image
 
 def calcola_carattere_controllo_cf(cf_15):
     pari = {
@@ -110,8 +112,18 @@ components.html("""
 if "msg_successo" not in st.session_state:
     st.session_state.msg_successo = ""
 
-st.title("🥋 Centro Discipline Marziali - CDM")
-st.caption("Piattaforma Gestionale Anagrafica & Certificati Medici")
+# INTESTAZIONE CON LOGO UFFICIALE RIDIMENSIONATO
+col_logo, col_titolo = st.columns([0.6, 4])
+with col_logo:
+    if os.path.exists("logo_cdm.png"):
+        img_logo = Image.open("logo_cdm.png")
+        st.image(img_logo, width=65)
+    else:
+        st.title("🥋")
+
+with col_titolo:
+    st.title("Centro Discipline Marziali - CDM")
+    st.caption("Piattaforma Gestionale Anagrafica & Certificati Medici")
 
 tab1, tab2 = st.tabs(["📝 Inserimento Atleta", "🔍 Cerca & Gestione Atleti"])
 
