@@ -75,7 +75,7 @@ def elimina_db(id_atleta):
 
 init_db()
 
-# INIZIALIZZAZIONE STATI (Sempre prima dell'interfaccia)
+# INIZIALIZZAZIONE STATI
 if "input_nome" not in st.session_state:
     st.session_state.input_nome = ""
 if "input_cognome" not in st.session_state:
@@ -88,6 +88,8 @@ if "input_disc" not in st.session_state:
     st.session_state.input_disc = []
 if "cf_errato" not in st.session_state:
     st.session_state.cf_errato = False
+if "msg_successo" not in st.session_state:
+    st.session_state.msg_successo = ""
 
 st.title("🥋 Centro Discipline Marziali - CDM")
 st.caption("Piattaforma Gestionale Anagrafica & Certificati Medici")
@@ -96,6 +98,11 @@ tab1, tab2 = st.tabs(["📝 Inserimento Atleta", "🔍 Cerca & Gestione Atleti"]
 
 with tab1:
     st.header("Nuova Iscrizione Atleta")
+    
+    # Se c'è un messaggio di successo salvato dallo step precedente, lo mostriamo qui in alto
+    if st.session_state.msg_successo:
+        st.success(st.session_state.msg_successo)
+        st.session_state.msg_successo = ""  # Si pulisce per la volta successiva
     
     with st.form(key="form_iscrizione", clear_on_submit=False):
         col_nome, col_cognome = st.columns(2)
@@ -138,13 +145,18 @@ with tab1:
                 st.error(f"❌ Impossibile salvare: {msg_cf}")
                 st.rerun()
             else:
+                # Disattiviamo l'allarme CF
                 st.session_state.cf_errato = False
+                
+                # Inserimento a DB
                 disc_str = ", ".join(discipline)
                 data_eur = scadenza_cert.strftime("%d/%m/%Y")
                 inserisci_db(nome, cognome, cf_pulito, telefono, data_eur, disc_str)
                 
-                st.success(f"✅ Atleta {nome} {cognome} salvato con successo!")
+                # Salviamo il messaggio verde nello stato
+                st.session_state.msg_successo = f"✅ Atleta {nome} {cognome} salvato con successo!"
                 
+                # Svuotiamo i campi per la prossima registrazione
                 st.session_state.input_nome = ""
                 st.session_state.input_cognome = ""
                 st.session_state.input_cf = ""
