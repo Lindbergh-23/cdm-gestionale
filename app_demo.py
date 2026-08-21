@@ -112,9 +112,6 @@ components.html("""
 if "msg_successo" not in st.session_state:
     st.session_state.msg_successo = ""
 
-# INTESTAZIONE CON LOGO UFFICIALE RIDIMENSIONATO
-col_logo, col_titolo = st.columns([0.6, 4])
-with col_logo:
 # INTESTAZIONE ARMONICA SU UNA RIGA
 col_logo, col_titolo = st.columns([0.8, 5])
 with col_logo:
