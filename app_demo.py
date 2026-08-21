@@ -115,15 +115,24 @@ if "msg_successo" not in st.session_state:
 # INTESTAZIONE CON LOGO UFFICIALE RIDIMENSIONATO
 col_logo, col_titolo = st.columns([0.6, 4])
 with col_logo:
+# INTESTAZIONE ARMONICA SU UNA RIGA
+col_logo, col_titolo = st.columns([0.8, 5])
+with col_logo:
     if os.path.exists("logo_cdm.png"):
         img_logo = Image.open("logo_cdm.png")
-        st.image(img_logo, width=65)
+        st.image(img_logo, width=80)
     else:
         st.title("🥋")
 
 with col_titolo:
-    st.title("Centro Discipline Marziali - CDM")
-    st.caption("Piattaforma Gestionale Anagrafica & Certificati Medici")
+    st.markdown("""
+        <h1 style='font-size: 26px; margin-bottom: 0px; padding-top: 5px;'>
+            Centro Discipline Marziali (CDM)
+        </h1>
+        <p style='font-size: 14px; color: gray; margin-top: 0px;'>
+            Piattaforma Gestionale Anagrafica & Certificati Medici
+        </p>
+    """, unsafe_allow_html=True)
 
 tab1, tab2 = st.tabs(["📝 Inserimento Atleta", "🔍 Cerca & Gestione Atleti"])
 
