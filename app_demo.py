@@ -2,7 +2,6 @@ import sqlite3
 import streamlit as st
 
 def calcola_carattere_controllo_cf(cf_15):
-    """Calcola algebricamente la 16a lettera del Codice Fiscale (algoritmo ufficiale MEF)."""
     pari = {
         '0': 0, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
         'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4, 'F': 5, 'G': 6, 'H': 7, 'I': 8, 'J': 9,
@@ -16,28 +15,23 @@ def calcola_carattere_controllo_cf(cf_15):
         'T': 14, 'U': 16, 'V': 10, 'W': 22, 'X': 25, 'Y': 24, 'Z': 23
     }
     controllo = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    
     somma = 0
     for i, char in enumerate(cf_15):
-        pos = i + 1  # Posizione 1-based
+        pos = i + 1
         if pos % 2 == 0:
             somma += pari.get(char, 0)
         else:
             somma += dispari.get(char, 0)
-            
     return controllo[somma % 26]
 
 def verifica_codice_fiscale(cf):
     cf = cf.strip().upper()
     if len(cf) != 16 or not cf.isalnum():
         return False, "Il Codice Fiscale deve contenere esattamente 16 caratteri alfanumerici."
-    
     carattere_calcolato = calcola_carattere_controllo_cf(cf[:15])
     carattere_inserito = cf[15]
-    
     if carattere_inserito != carattere_calcolato:
         return False, f"Carattere di controllo errato (Atteso: {carattere_calcolato}, Inserito: {carattere_inserito})."
-        
     return True, "OK"
 
 def init_db():
@@ -51,7 +45,6 @@ def init_db():
     conn.close()
 
 def atleta_esistente(cf):
-    """Verifica se il Codice Fiscale è già registrato nel database."""
     conn = sqlite3.connect("cdm_gestionale.db")
     c = conn.cursor()
     c.execute("SELECT nome, cognome FROM registro_atleti WHERE cf = ?", (cf,))
@@ -90,12 +83,17 @@ def elimina_db(id_atleta):
 
 init_db()
 
-# INIZIALIZZAZIONE STATO CAMPI
-if "k_nome" not in st.session_state: st.session_state.k_nome = ""
-if "k_cognome" not in st.session_state: st.session_state.k_cognome = ""
-if "k_cf" not in st.session_state: st.session_state.k_cf = ""
-if "k_tel" not in st.session_state: st.session_state.k_tel = ""
-if "msg_successo" not in st.session_state: st.session_state.msg_successo = ""
+# CSS PER NASCONDERE IL SUGGERIMENTO "Press Enter to submit form"
+st.markdown("""
+    <style>
+    [data-testid="InputInstructions"] {
+        display: none !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+if "msg_successo" not in st.session_state:
+    st.session_state.msg_successo = ""
 
 st.title("🥋 Centro Discipline Marziali - CDM")
 st.caption("Piattaforma Gestionale Anagrafica & Certificati Medici")
@@ -109,26 +107,26 @@ with tab1:
         st.success(st.session_state.msg_successo)
         st.session_state.msg_successo = ""
 
-    # Campi svincolati dal Form per evitare l'invio accidentale con Enter
-    col_nome, col_cognome = st.columns(2)
-    with col_nome:
-        nome = st.text_input("Nome", key="input_nome")
-    with col_cognome:
-        cognome = st.text_input("Cognome", key="input_cognome")
+    with st.form(key="form_iscrizione", clear_on_submit=True):
+        col_nome, col_cognome = st.columns(2)
+        with col_nome:
+            nome = st.text_input("Nome")
+        with col_cognome:
+            cognome = st.text_input("Cognome")
 
-    col_cf, col_tel = st.columns(2)
-    with col_cf:
-        codice_fiscale = st.text_input("Codice Fiscale (16 car.)", key="input_cf")
-    with col_tel:
-        telefono = st.text_input("Telefono", key="input_tel")
+        col_cf, col_tel = st.columns(2)
+        with col_cf:
+            codice_fiscale = st.text_input("Codice Fiscale (16 car.)")
+        with col_tel:
+            telefono = st.text_input("Telefono")
 
-    col_cert, col_disc = st.columns(2)
-    with col_cert:
-        scadenza_cert = st.date_input("Scadenza Certificato Medico", format="DD/MM/YYYY")
-    with col_disc:
-        discipline = st.multiselect("Discipline", ["Judo", "Karate", "Ju-Jitsu", "Tai-Chi"], key="input_disc")
+        col_cert, col_disc = st.columns(2)
+        with col_cert:
+            scadenza_cert = st.date_input("Scadenza Certificato Medico", format="DD/MM/YYYY")
+        with col_disc:
+            discipline = st.multiselect("Discipline", ["Judo", "Karate", "Ju-Jitsu", "Tai-Chi"])
 
-    btn_salva = st.button("💾 Salva in Database", type="primary")
+        btn_salva = st.form_submit_button("💾 Salva in Database")
 
     if btn_salva:
         if not nome or not cognome or not codice_fiscale or not telefono or not discipline:
