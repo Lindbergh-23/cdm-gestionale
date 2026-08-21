@@ -18,10 +18,8 @@ def calcola_carattere_controllo_cf(cf_15):
     controllo = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     
     somma = 0
-    # In Python l'indice i parte da 0. 
-    # Per l'algoritmo ufficiale: 1° carattere (i=0) è DISPARI, 2° carattere (i=1) è PARI.
     for i, char in enumerate(cf_15):
-        pos = i + 1  # Trasformiamo l'indice in posizione 1-based
+        pos = i + 1  # Posizione 1-based
         if pos % 2 == 0:
             somma += pari.get(char, 0)
         else:
@@ -38,7 +36,7 @@ def verifica_codice_fiscale(cf):
     carattere_inserito = cf[15]
     
     if carattere_inserito != carattere_calcolato:
-        return False, f"Carattere di controllo (16ª lettera) non valido. Verificare la digitazione."
+        return False, "Carattere di controllo (16ª lettera) non valido. Verificare la digitazione."
         
     return True, "OK"
 
@@ -77,7 +75,21 @@ def elimina_db(id_atleta):
 
 init_db()
 
-st.title("🥋Centro Discipline Marziali-CDM")
+# INIZIALIZZAZIONE STATI (Sempre prima dell'interfaccia)
+if "input_nome" not in st.session_state:
+    st.session_state.input_nome = ""
+if "input_cognome" not in st.session_state:
+    st.session_state.input_cognome = ""
+if "input_cf" not in st.session_state:
+    st.session_state.input_cf = ""
+if "input_tel" not in st.session_state:
+    st.session_state.input_tel = ""
+if "input_disc" not in st.session_state:
+    st.session_state.input_disc = []
+if "cf_errato" not in st.session_state:
+    st.session_state.cf_errato = False
+
+st.title("🥋 Centro Discipline Marziali - CDM")
 st.caption("Piattaforma Gestionale Anagrafica & Certificati Medici")
 
 tab1, tab2 = st.tabs(["📝 Inserimento Atleta", "🔍 Cerca & Gestione Atleti"])
@@ -85,7 +97,6 @@ tab1, tab2 = st.tabs(["📝 Inserimento Atleta", "🔍 Cerca & Gestione Atleti"]
 with tab1:
     st.header("Nuova Iscrizione Atleta")
     
-    # Form con dati che non si cancellano
     with st.form(key="form_iscrizione", clear_on_submit=False):
         col_nome, col_cognome = st.columns(2)
         with col_nome:
@@ -95,8 +106,7 @@ with tab1:
 
         col_cf, col_tel = st.columns(2)
         with col_cf:
-            # Se la variabile d'errore è attiva, cambiamo l'etichetta del campo in ROSSO/ALERT
-            label_cf = "❌ Codice Fiscale (ERRATO - RICORREGGERE)" if st.session_state.get("cf_errato", False) else "Codice Fiscale (16 car.)"
+            label_cf = "❌ CODICE FISCALE (ERRATO - RICORREGGERE)" if st.session_state.cf_errato else "Codice Fiscale (16 car.)"
             codice_fiscale = st.text_input(label_cf, value=st.session_state.input_cf)
             
         with col_tel:
@@ -111,7 +121,6 @@ with tab1:
         btn_salva = st.form_submit_button("💾 Salva in Database")
 
     if btn_salva:
-        # Memorizziamo ciò che è stato digitato
         st.session_state.input_nome = nome
         st.session_state.input_cognome = cognome
         st.session_state.input_cf = codice_fiscale
@@ -125,12 +134,10 @@ with tab1:
             esito_cf, msg_cf = verifica_codice_fiscale(cf_pulito)
             
             if not esito_cf:
-                # Impostiamo il flag di errore e ricarichiamo la pagina per evidenziare il campo in rosso!
                 st.session_state.cf_errato = True
-                st.error(f"❌ {msg_cf}")
+                st.error(f"❌ Impossibile salvare: {msg_cf}")
                 st.rerun()
             else:
-                # Se è corretto, rimuoviamo l'allarme e salviamo
                 st.session_state.cf_errato = False
                 disc_str = ", ".join(discipline)
                 data_eur = scadenza_cert.strftime("%d/%m/%Y")
@@ -138,7 +145,6 @@ with tab1:
                 
                 st.success(f"✅ Atleta {nome} {cognome} salvato con successo!")
                 
-                # Reset di tutti i dati
                 st.session_state.input_nome = ""
                 st.session_state.input_cognome = ""
                 st.session_state.input_cf = ""
