@@ -50,6 +50,15 @@ def init_db():
     conn.commit()
     conn.close()
 
+def atleta_esistente(cf):
+    """Verifica se il Codice Fiscale è già registrato nel database."""
+    conn = sqlite3.connect("cdm_gestionale.db")
+    c = conn.cursor()
+    c.execute("SELECT nome, cognome FROM registro_atleti WHERE cf = ?", (cf,))
+    atleta = c.fetchone()
+    conn.close()
+    return atleta
+
 def inserisci_db(nome, cognome, cf, tel, scad, disc):
     conn = sqlite3.connect("cdm_gestionale.db")
     c = conn.cursor()
@@ -75,7 +84,9 @@ def elimina_db(id_atleta):
 
 init_db()
 
-# INIZIALIZZAZIONE STATI
+# INIZIALIZZAZIONE STATI E CHIAVI FORM
+if "form_key" not in st.session_state:
+    st.session_state.form_key = 0
 if "input_nome" not in st.session_state:
     st.session_state.input_nome = ""
 if "input_cognome" not in st.session_state:
@@ -99,12 +110,12 @@ tab1, tab2 = st.tabs(["📝 Inserimento Atleta", "🔍 Cerca & Gestione Atleti"]
 with tab1:
     st.header("Nuova Iscrizione Atleta")
     
-    # Se c'è un messaggio di successo salvato dallo step precedente, lo mostriamo qui in alto
     if st.session_state.msg_successo:
         st.success(st.session_state.msg_successo)
-        st.session_state.msg_successo = ""  # Si pulisce per la volta successiva
+        st.session_state.msg_successo = ""
     
-    with st.form(key="form_iscrizione", clear_on_submit=False):
+    # Il form cambia identificativo dinamico (form_key) ogni volta che salviamo con successo, resettando l'interfaccia
+    with st.form(key=f"form_iscrizione_{st.session_state.form_key}", clear_on_submit=False):
         col_nome, col_cognome = st.columns(2)
         with col_nome:
             nome = st.text_input("Nome", value=st.session_state.input_nome)
@@ -145,24 +156,30 @@ with tab1:
                 st.error(f"❌ Impossibile salvare: {msg_cf}")
                 st.rerun()
             else:
-                # Disattiviamo l'allarme CF
-                st.session_state.cf_errato = False
-                
-                # Inserimento a DB
-                disc_str = ", ".join(discipline)
-                data_eur = scadenza_cert.strftime("%d/%m/%Y")
-                inserisci_db(nome, cognome, cf_pulito, telefono, data_eur, disc_str)
-                
-                # Salviamo il messaggio verde nello stato
-                st.session_state.msg_successo = f"✅ Atleta {nome} {cognome} salvato con successo!"
-                
-                # Svuotiamo i campi per la prossima registrazione
-                st.session_state.input_nome = ""
-                st.session_state.input_cognome = ""
-                st.session_state.input_cf = ""
-                st.session_state.input_tel = ""
-                st.session_state.input_disc = []
-                st.rerun()
+                # Controlliamo se l'atleta esiste già nel DB
+                gia_presente = atleta_esistente(cf_pulito)
+                if gia_presente:
+                    st.session_state.cf_errato = True
+                    st.error(f"⚠️ Atleta già presente in archivio: **{gia_presente[0]} {gia_presente[1]}** (CF: {cf_pulito})")
+                    st.rerun()
+                else:
+                    st.session_state.cf_errato = False
+                    
+                    disc_str = ", ".join(discipline)
+                    data_eur = scadenza_cert.strftime("%d/%m/%Y")
+                    inserisci_db(nome, cognome, cf_pulito, telefono, data_eur, disc_str)
+                    
+                    st.session_state.msg_successo = f"✅ Atleta {nome} {cognome} salvato con successo!"
+                    
+                    # Reset variabili di stato
+                    st.session_state.input_nome = ""
+                    st.session_state.input_cognome = ""
+                    st.session_state.input_cf = ""
+                    st.session_state.input_tel = ""
+                    st.session_state.input_disc = []
+                    # Incrementiamo il form_key per distruggere il vecchio form e forzarne uno completamente pulito
+                    st.session_state.form_key += 1
+                    st.rerun()
 
 with tab2:
     st.header("Gestione & Elenco Atleti")
