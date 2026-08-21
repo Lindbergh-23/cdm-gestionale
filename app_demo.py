@@ -36,7 +36,7 @@ def verifica_codice_fiscale(cf):
     carattere_inserito = cf[15]
     
     if carattere_inserito != carattere_calcolato:
-        return False, "Carattere di controllo (16ª lettera) non valido. Verificare la digitazione."
+        return False, f"Carattere di controllo errato (Atteso: {carattere_calcolato}, Inserito: {carattere_inserito})."
         
     return True, "OK"
 
@@ -90,21 +90,7 @@ def elimina_db(id_atleta):
 
 init_db()
 
-# INIZIALIZZAZIONE STATI
-if "form_key" not in st.session_state:
-    st.session_state.form_key = 0
-if "input_nome" not in st.session_state:
-    st.session_state.input_nome = ""
-if "input_cognome" not in st.session_state:
-    st.session_state.input_cognome = ""
-if "input_cf" not in st.session_state:
-    st.session_state.input_cf = ""
-if "input_tel" not in st.session_state:
-    st.session_state.input_tel = ""
-if "input_disc" not in st.session_state:
-    st.session_state.input_disc = []
-if "cf_errato" not in st.session_state:
-    st.session_state.cf_errato = False
+# INIZIALIZZAZIONE MESSAGGIO DI SUCESSO
 if "msg_successo" not in st.session_state:
     st.session_state.msg_successo = ""
 
@@ -120,36 +106,30 @@ with tab1:
         st.success(st.session_state.msg_successo)
         st.session_state.msg_successo = ""
     
-    with st.form(key=f"form_iscrizione_{st.session_state.form_key}", clear_on_submit=False):
+    # Usiamo clear_on_submit=True per pulire automaticamente i campi dopo il salvataggio
+    with st.form(key="form_iscrizione", clear_on_submit=True):
         col_nome, col_cognome = st.columns(2)
         with col_nome:
-            nome = st.text_input("Nome", value=st.session_state.input_nome)
+            nome = st.text_input("Nome")
         with col_cognome:
-            cognome = st.text_input("Cognome", value=st.session_state.input_cognome)
+            cognome = st.text_input("Cognome")
 
         col_cf, col_tel = st.columns(2)
         with col_cf:
-            label_cf = "❌ CODICE FISCALE (ERRATO - RICORREGGERE)" if st.session_state.cf_errato else "Codice Fiscale (16 car.)"
-            codice_fiscale = st.text_input(label_cf, value=st.session_state.input_cf)
+            codice_fiscale = st.text_input("Codice Fiscale (16 car.)")
             
         with col_tel:
-            telefono = st.text_input("Telefono", value=st.session_state.input_tel)
+            telefono = st.text_input("Telefono")
 
         col_cert, col_disc = st.columns(2)
         with col_cert:
             scadenza_cert = st.date_input("Scadenza Certificato Medico", format="DD/MM/YYYY")
         with col_disc:
-            discipline = st.multiselect("Discipline", ["Judo", "Karate", "Ju-Jitsu", "Tai-Chi"], default=st.session_state.input_disc)
+            discipline = st.multiselect("Discipline", ["Judo", "Karate", "Ju-Jitsu", "Tai-Chi"])
 
         btn_salva = st.form_submit_button("💾 Salva in Database")
 
     if btn_salva:
-        st.session_state.input_nome = nome
-        st.session_state.input_cognome = cognome
-        st.session_state.input_cf = codice_fiscale
-        st.session_state.input_tel = telefono
-        st.session_state.input_disc = discipline
-
         if not nome or not cognome or not codice_fiscale or not telefono or not discipline:
             st.error("⚠️ Compilare tutti i campi prima di salvare!")
         else:
@@ -157,37 +137,22 @@ with tab1:
             esito_cf, msg_cf = verifica_codice_fiscale(cf_pulito)
             
             if not esito_cf:
-                st.session_state.cf_errato = True
                 st.error(f"❌ Impossibile salvare: {msg_cf}")
-                st.rerun()
             else:
-                # Se il CF è valido, spegniamo la spia rossa di errore di digitazione
-                st.session_state.cf_errato = False
-                
-                # Controlliamo se l'atleta esiste già nel DB
                 gia_presente = atleta_esistente(cf_pulito)
                 if gia_presente:
-                    st.warning(f"⚠️ **ATLETA GIÀ REGISTRATO**: L'atleta **{gia_presente[0]} {gia_presente[1]}** (CF: `{cf_pulito}`) è già presente nel database!")
+                    st.warning(f"⚠️ **ATLETA GIÀ REGISTRATO**: **{gia_presente[0]} {gia_presente[1]}** (CF: `{cf_pulito}`) è già in archivio!")
                 else:
                     disc_str = ", ".join(discipline)
                     data_eur = scadenza_cert.strftime("%d/%m/%Y")
                     inserisci_db(nome, cognome, cf_pulito, telefono, data_eur, disc_str)
                     
                     st.session_state.msg_successo = f"✅ Atleta {nome} {cognome} salvato con successo!"
-                    
-                    # Reset variabili di stato e form
-                    st.session_state.input_nome = ""
-                    st.session_state.input_cognome = ""
-                    st.session_state.input_cf = ""
-                    st.session_state.input_tel = ""
-                    st.session_state.input_disc = []
-                    st.session_state.form_key += 1
                     st.rerun()
 
 with tab2:
     st.header("Gestione & Elenco Atleti")
     
-    # Campo di ricerca dinamico
     search_query = st.text_input("🔎 Cerca per Nome, Cognome o Codice Fiscale:", placeholder="Es: Roberto oppure BRN...")
     
     atleti = ottieni_db(search_query)
