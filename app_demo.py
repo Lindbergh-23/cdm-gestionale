@@ -1,5 +1,6 @@
 import sqlite3
 import streamlit as st
+import streamlit.components.v1 as components
 
 def calcola_carattere_controllo_cf(cf_15):
     pari = {
@@ -83,7 +84,7 @@ def elimina_db(id_atleta):
 
 init_db()
 
-# CSS PER NASCONDERE IL SUGGERIMENTO "Press Enter to submit form"
+# CSS PER NASCONDERE I SUGGERIMENTI
 st.markdown("""
     <style>
     [data-testid="InputInstructions"] {
@@ -91,6 +92,20 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
+
+# JS PER DISABILITARE COMPLETAMENTE L'INVIO TRAMITE TASTO ENTER
+components.html("""
+    <script>
+    const doc = window.parent.document;
+    doc.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }
+    }, true);
+    </script>
+""", height=0, width=0)
 
 if "msg_successo" not in st.session_state:
     st.session_state.msg_successo = ""
