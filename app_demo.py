@@ -122,7 +122,7 @@ with col_logo:
         st.title("🥋")
 
 with col_titolo:
-    st.title("Centro Discipline Marziali-CDM")
+    st.title("Centro Discipline Marziali - CDM")
     st.caption("Piattaforma Gestionale Anagrafica & Certificati Medici")
 
 tab1, tab2 = st.tabs(["📝 Inserimento Atleta", "🔍 Cerca & Gestione Atleti"])
