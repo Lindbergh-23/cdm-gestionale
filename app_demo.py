@@ -1,8 +1,70 @@
 import os
-import sqlite3
+import libsql_experimental as libsql
 import streamlit as st
 import streamlit.components.v1 as components
 from PIL import Image
+
+# CONNESSIONE A TURSO DB CLOUD
+def get_db_connection():
+    url = st.secrets.get("TURSO_DATABASE_URL", "")
+    token = st.secrets.get("TURSO_AUTH_TOKEN", "")
+    
+    if url and token:
+        return libsql.connect("cdm_gestionale.db", sync_url=url, auth_token=token)
+    else:
+        # Fallback locale se non trova i Secrets
+        return libsql.connect("cdm_gestionale.db")
+
+def init_db():
+    conn = get_db_connection()
+    conn.sync()
+    conn.execute('''CREATE TABLE IF NOT EXISTS registro_atleti 
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                  nome TEXT, cognome TEXT, cf TEXT, 
+                  telefono TEXT, scadenza TEXT, discipline TEXT)''')
+    conn.commit()
+    conn.close()
+
+def atleta_esistente(cf):
+    conn = get_db_connection()
+    conn.sync()
+    cur = conn.cursor()
+    cur.execute("SELECT nome, cognome FROM registro_atleti WHERE cf = ?", (cf,))
+    atleta = cur.fetchone()
+    conn.close()
+    return atleta
+
+def inserisci_db(nome, cognome, cf, tel, scad, disc):
+    conn = get_db_connection()
+    conn.sync()
+    conn.execute("INSERT INTO registro_atleti (nome, cognome, cf, telefono, scadenza, discipline) VALUES (?, ?, ?, ?, ?, ?)",
+                 (nome, cognome, cf, tel, scad, disc))
+    conn.commit()
+    conn.sync()
+    conn.close()
+
+def ottieni_db(query_ricerca=""):
+    conn = get_db_connection()
+    conn.sync()
+    cur = conn.cursor()
+    if query_ricerca:
+        param = f"%{query_ricerca.strip()}%"
+        cur.execute("""SELECT * FROM registro_atleti 
+                     WHERE nome LIKE ? OR cognome LIKE ? OR cf LIKE ?""", 
+                  (param, param, param))
+    else:
+        cur.execute("SELECT * FROM registro_atleti")
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+def elimina_db(id_atleta):
+    conn = get_db_connection()
+    conn.sync()
+    conn.execute("DELETE FROM registro_atleti WHERE id = ?", (id_atleta,))
+    conn.commit()
+    conn.sync()
+    conn.close()
 
 def calcola_carattere_controllo_cf(cf_15):
     pari = {
@@ -36,53 +98,6 @@ def verifica_codice_fiscale(cf):
     if carattere_inserito != carattere_calcolato:
         return False, f"Carattere di controllo errato (Atteso: {carattere_calcolato}, Inserito: {carattere_inserito})."
     return True, "OK"
-
-def init_db():
-    conn = sqlite3.connect("cdm_gestionale.db")
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS registro_atleti 
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                  nome TEXT, cognome TEXT, cf TEXT, 
-                  telefono TEXT, scadenza TEXT, discipline TEXT)''')
-    conn.commit()
-    conn.close()
-
-def atleta_esistente(cf):
-    conn = sqlite3.connect("cdm_gestionale.db")
-    c = conn.cursor()
-    c.execute("SELECT nome, cognome FROM registro_atleti WHERE cf = ?", (cf,))
-    atleta = c.fetchone()
-    conn.close()
-    return atleta
-
-def inserisci_db(nome, cognome, cf, tel, scad, disc):
-    conn = sqlite3.connect("cdm_gestionale.db")
-    c = conn.cursor()
-    c.execute("INSERT INTO registro_atleti (nome, cognome, cf, telefono, scadenza, discipline) VALUES (?, ?, ?, ?, ?, ?)",
-              (nome, cognome, cf, tel, scad, disc))
-    conn.commit()
-    conn.close()
-
-def ottieni_db(query_ricerca=""):
-    conn = sqlite3.connect("cdm_gestionale.db")
-    c = conn.cursor()
-    if query_ricerca:
-        param = f"%{query_ricerca.strip()}%"
-        c.execute("""SELECT * FROM registro_atleti 
-                     WHERE nome LIKE ? OR cognome LIKE ? OR cf LIKE ?""", 
-                  (param, param, param))
-    else:
-        c.execute("SELECT * FROM registro_atleti")
-    rows = c.fetchall()
-    conn.close()
-    return rows
-
-def elimina_db(id_atleta):
-    conn = sqlite3.connect("cdm_gestionale.db")
-    c = conn.cursor()
-    c.execute("DELETE FROM registro_atleti WHERE id = ?", (id_atleta,))
-    conn.commit()
-    conn.close()
 
 init_db()
 
