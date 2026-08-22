@@ -1,70 +1,52 @@
 import os
-import libsql_experimental as libsql
+import libsql_client
 import streamlit as st
 import streamlit.components.v1 as components
 from PIL import Image
 
-# CONNESSIONE A TURSO DB CLOUD
-def get_db_connection():
+# FUNZIONE PER ESEGUIRE QUERY SU TURSO (O DB LOCALE COME FALLBACK)
+def esegui_query(query, params=()):
     url = st.secrets.get("TURSO_DATABASE_URL", "")
     token = st.secrets.get("TURSO_AUTH_TOKEN", "")
     
+    # Connessione Turso HTTP / Cloud
     if url and token:
-        return libsql.connect("cdm_gestionale.db", sync_url=url, auth_token=token)
+        # Convertiamo l'URL da libsql:// a https:// per la libreria client HTTP
+        http_url = url.replace("libsql://", "https://")
+        with libsql_client.create_client_sync(url=http_url, auth_token=token) as client:
+            result = client.execute(query, params)
+            return result.rows
     else:
-        # Fallback locale se non trova i Secrets
-        return libsql.connect("cdm_gestionale.db")
+        st.error("⚠️ Credenziali Turso non trovate nei Secrets di Streamlit!")
+        return []
 
 def init_db():
-    conn = get_db_connection()
-    conn.sync()
-    conn.execute('''CREATE TABLE IF NOT EXISTS registro_atleti 
+    esegui_query('''CREATE TABLE IF NOT EXISTS registro_atleti 
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, 
                   nome TEXT, cognome TEXT, cf TEXT, 
                   telefono TEXT, scadenza TEXT, discipline TEXT)''')
-    conn.commit()
-    conn.close()
 
 def atleta_esistente(cf):
-    conn = get_db_connection()
-    conn.sync()
-    cur = conn.cursor()
-    cur.execute("SELECT nome, cognome FROM registro_atleti WHERE cf = ?", (cf,))
-    atleta = cur.fetchone()
-    conn.close()
-    return atleta
+    rows = esegui_query("SELECT nome, cognome FROM registro_atleti WHERE cf = ?", (cf,))
+    if rows:
+        return rows[0]
+    return None
 
 def inserisci_db(nome, cognome, cf, tel, scad, disc):
-    conn = get_db_connection()
-    conn.sync()
-    conn.execute("INSERT INTO registro_atleti (nome, cognome, cf, telefono, scadenza, discipline) VALUES (?, ?, ?, ?, ?, ?)",
+    esegui_query("INSERT INTO registro_atleti (nome, cognome, cf, telefono, scadenza, discipline) VALUES (?, ?, ?, ?, ?, ?)",
                  (nome, cognome, cf, tel, scad, disc))
-    conn.commit()
-    conn.sync()
-    conn.close()
 
 def ottieni_db(query_ricerca=""):
-    conn = get_db_connection()
-    conn.sync()
-    cur = conn.cursor()
     if query_ricerca:
         param = f"%{query_ricerca.strip()}%"
-        cur.execute("""SELECT * FROM registro_atleti 
-                     WHERE nome LIKE ? OR cognome LIKE ? OR cf LIKE ?""", 
-                  (param, param, param))
+        return esegui_query("""SELECT * FROM registro_atleti 
+                             WHERE nome LIKE ? OR cognome LIKE ? OR cf LIKE ?""", 
+                          (param, param, param))
     else:
-        cur.execute("SELECT * FROM registro_atleti")
-    rows = cur.fetchall()
-    conn.close()
-    return rows
+        return esegui_query("SELECT * FROM registro_atleti")
 
 def elimina_db(id_atleta):
-    conn = get_db_connection()
-    conn.sync()
-    conn.execute("DELETE FROM registro_atleti WHERE id = ?", (id_atleta,))
-    conn.commit()
-    conn.sync()
-    conn.close()
+    esegui_query("DELETE FROM registro_atleti WHERE id = ?", (id_atleta,))
 
 def calcola_carattere_controllo_cf(cf_15):
     pari = {
